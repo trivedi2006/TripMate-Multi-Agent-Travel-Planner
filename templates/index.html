@@ -2,128 +2,483 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tripmate AI — Autonomous Multi-Agent Travel Planner</title>
+    <meta name="description" content="Plan your perfect trip with Tripmate AI. Powered by LangGraph multi-agent intelligence, real-time flight schedules, curated hotels, and instant PDF itineraries.">
 
-    <title>TripMate AI</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 
+    <!-- Styles -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
-
 <body>
 
+    <!-- Ambient Glow Background -->
     <div class="page-bg">
         <div class="gradient-circle circle-1"></div>
         <div class="gradient-circle circle-2"></div>
         <div class="gradient-circle circle-3"></div>
+        <div class="bg-grid"></div>
     </div>
 
-    <main class="app-container">
+    <!-- Navigation Header -->
+    <header class="site-navbar" id="navbar">
+        <div class="nav-container">
+            <a href="#" class="brand-logo" onclick="handleLogoClick(); return false;">
+                <div class="logo-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3.5c-.5-.5-2.5 0-4 1.5L13.5 8.5 5.3 6.7c-.8-.2-1.6.1-2 .7l-.5.7 6.2 4.5-3 3L3.5 15c-.4.2-.6.7-.4 1.1l.6.8c.3.4.8.5 1.2.3l1.8-1 3 3 4.5 6.2.7-.5c.6-.4.9-1.2.7-2z"/>
+                    </svg>
+                </div>
+                <span class="logo-text">Tripmate<span class="logo-dot">.ai</span></span>
+            </a>
 
-        <section class="hero-section">
-            <div class="badge">
-                ✈️ TripMate AI — A Multi-Agent Travel Planner with LangGraph
+            <nav class="nav-links" id="navLinks">
+                <a href="#destinations" class="nav-item landing-only-nav">Destinations</a>
+                <a href="#how-it-thinks" class="nav-item landing-only-nav">How it works</a>
+                <a href="#" class="nav-item planner-only-nav hidden" onclick="switchView('planner'); return false;">Planner</a>
+            </nav>
+
+            <div class="nav-actions">
+                <button class="btn btn-outline" id="navLoginBtn" onclick="handleNavLoginClick()">
+                    Log In
+                </button>
+                <button class="btn btn-primary" id="navSignupBtn" onclick="handleNavSignupClick()">
+                    <span>Sign Up</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </button>
+
+                <!-- Profile Dropdown (Active when logged in) -->
+                <div class="user-profile-menu hidden" id="userProfileMenu">
+                    <button class="profile-btn" id="profileBtn" onclick="toggleProfileDropdown(event)">
+                        <div class="profile-avatar" id="profileAvatar">A</div>
+                        <span id="profileName">Alex</span>
+                        <svg class="dropdown-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+                    <div class="profile-dropdown hidden" id="profileDropdown">
+                        <div class="dropdown-header">
+                            <strong id="dropdownUserName">Alex Morgan</strong>
+                            <span id="dropdownUserEmail">alex@example.com</span>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" class="dropdown-item" onclick="switchView('planner'); closeProfileDropdown(); return false;">
+                            🚀 Planner
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item logout-item" onclick="logoutUser(); closeProfileDropdown();">
+                            🚪 Log Out
+                        </button>
+                    </div>
+                </div>
+
+                <button class="mobile-toggle" id="mobileMenuBtn" aria-label="Toggle navigation menu" onclick="toggleMobileMenu()">
+                    <span></span><span></span><span></span>
+                </button>
             </div>
+        </div>
+    </header>
 
-            <h1>
-                Plan Your Perfect Trip with AI
-            </h1>
+    <!-- Main Container -->
+    <main class="app-wrapper">
 
-            <p>
-                Search flights, discover hotels, and generate a complete travel itinerary using a multi-agent LangGraph system.
-            </p>
-        </section>
+        <!-- ================= PUBLIC LANDING PAGE VIEW ================= -->
+        <div id="publicLandingView">
 
-        <section class="planner-card">
+            <!-- Hero Section -->
+            <section class="hero-section" id="hero">
+                <div class="hero-content">
+                    <div class="hero-badge">
+                        <span class="badge-dot"></span>
+                        <span>MULTI-AGENT TRAVEL INTELLIGENCE</span>
+                    </div>
 
-            <div class="card-header">
-                <div>
-                    <h2>Where do you want to go?</h2>
-                    <p>
-                        Example: Plan a complete 7 days Japan trip from Bangladesh under 2 lakhs.
+                    <h1 class="hero-title">
+                        Tell Tripmate where you're dreaming of.<br>
+                        <span class="hero-accent">It plans the rest.</span>
+                    </h1>
+
+                    <p class="hero-subtitle">
+                        Describe your trip in plain English. Tripmate's specialized LangGraph agents fetch live flight schedules, handpick boutique hotels, and build tailored day-by-day itineraries in under 2 minutes.
                     </p>
+
+
+
+
+                    <div class="hero-tags">
+                        <span class="tag-label">Popular prompts:</span>
+                        <button class="prompt-chip" onclick="quickFillPrompt('Plan a 7-day food and culture trip to Kyoto & Tokyo under $2,500')">🌸 Kyoto & Tokyo</button>
+                        <button class="prompt-chip" onclick="quickFillPrompt('5 days in Dubai with desert safari, luxury hotels, and flights from Dhaka')">🏜️ Dubai Luxury</button>
+                        <button class="prompt-chip" onclick="quickFillPrompt('7 days in Iceland searching for Northern Lights with rental car itinerary')">🌌 Northern Lights</button>
+                    </div>
                 </div>
 
-                <div class="status-pill">
-                    <span class="status-dot"></span>
-                    Online
+                <!-- Hero Visual: 3-Card Interactive Showcase -->
+                <div class="hero-visual">
+                    <div class="visual-container">
+                        <div class="card-carousel" id="heroCardCarousel">
+                            <!-- Card 1: Japan -->
+                            <div class="postcard card-slide active" data-slide="0" onclick="setHeroSlide(0)">
+                                <div class="postcard-img" style="background-image: url('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=800&auto=format&fit=crop')">
+                                    <span class="card-badge">🌸 Tokyo, Japan</span>
+                                </div>
+                                <div class="postcard-body">
+                                    <div class="card-title-row">
+                                        <h3>Tokyo & Mount Fuji</h3>
+                                        <span class="card-price">$1,850 est.</span>
+                                    </div>
+                                    <p>7 Days • Temples, Bullet Train & Kaiseki</p>
+                                    <div class="card-stats">
+                                        <span>✈️ Direct Flights</span>
+                                        <span>🏨 4★ Ryokan</span>
+                                        <span>⭐ 4.9</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 2: China -->
+                            <div class="postcard card-slide next" data-slide="1" onclick="setHeroSlide(1)">
+                                <div class="postcard-img" style="background-image: url('https://images.unsplash.com/photo-1508804185872-d7badad00f7d?q=80&w=800&auto=format&fit=crop')">
+                                    <span class="card-badge">🏯 Beijing, China</span>
+                                </div>
+                                <div class="postcard-body">
+                                    <div class="card-title-row">
+                                        <h3>Great Wall & Forbidden City</h3>
+                                        <span class="card-price">$1,650 est.</span>
+                                    </div>
+                                    <p>6 Days • Ancient Palaces & Tea Culture</p>
+                                    <div class="card-stats">
+                                        <span>✈️ Direct Flights</span>
+                                        <span>🏨 5★ Hotel</span>
+                                        <span>⭐ 4.92</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 3: France -->
+                            <div class="postcard card-slide prev" data-slide="2" onclick="setHeroSlide(2)">
+                                <div class="postcard-img" style="background-image: url('https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=800&auto=format&fit=crop')">
+                                    <span class="card-badge">🗼 Paris, France</span>
+                                </div>
+                                <div class="postcard-body">
+                                    <div class="card-title-row">
+                                        <h3>Eiffel Tower & Louvre Museum</h3>
+                                        <span class="card-price">$2,100 est.</span>
+                                    </div>
+                                    <p>5 Days • Seine River Cruise & Fine Dining</p>
+                                    <div class="card-stats">
+                                        <span>✈️ Direct Flights</span>
+                                        <span>🏨 Boutique Stay</span>
+                                        <span>⭐ 4.88</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Carousel Switcher Dots -->
+                        <div class="carousel-dots">
+                            <button class="dot active" id="dot0" onclick="setHeroSlide(0)" aria-label="Kyoto Card"></button>
+                            <button class="dot" id="dot1" onclick="setHeroSlide(1)" aria-label="Reykjavik Card"></button>
+                            <button class="dot" id="dot2" onclick="setHeroSlide(2)" aria-label="Marrakesh Card"></button>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </section>
 
-            <div class="input-area">
-                <textarea
-                    id="userInput"
-                    placeholder="Plan a complete 7 days Japan trip including flights, hotels and sightseeing under 2 lakhs..."
-                ></textarea>
+            <!-- Trust & Intelligence Bar -->
+            <section class="trust-section" id="trust">
+                <div class="trust-grid">
+                    <div class="trust-item">
+                        <div class="trust-number">4</div>
+                        <div class="trust-label">
+                            <strong>Autonomous AI Agents</strong>
+                            <span>Flight, Hotel, Itinerary & Synthesizer</span>
+                        </div>
+                    </div>
+                    <div class="trust-item">
+                        <div class="trust-number">Live</div>
+                        <div class="trust-label">
+                            <strong>AviationStack & Tavily</strong>
+                            <span>Real-time flight schedules & hotel rates</span>
+                        </div>
+                    </div>
+                    <div class="trust-item">
+                        <div class="trust-number">100%</div>
+                        <div class="trust-label">
+                            <strong>Tailored Itineraries</strong>
+                            <span>Customized to your budget & interests</span>
+                        </div>
+                    </div>
+                    <div class="trust-item">
+                        <div class="trust-number">&lt; 2m</div>
+                        <div class="trust-label">
+                            <strong>Instant PDF Export</strong>
+                            <span>Save & download 1-click travel plans</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-                <button id="sendBtn" onclick="sendMessage()">
-                    <span id="btnText">Generate Plan</span>
-                    <span id="btnLoader" class="loader hidden"></span>
-                </button>
-            </div>
-
-            <div class="quick-prompts">
-                <button onclick="setPrompt('Plan a complete 7 days Japan trip from Bangladesh including flights, hotels and sightseeing under 2 lakhs.')">
-                    Japan Trip
-                </button>
-
-                <button onclick="setPrompt('Plan a 5 days Dubai trip from Dhaka with flights, hotels and sightseeing.')">
-                    Dubai Trip
-                </button>
-
-                <button onclick="setPrompt('Plan a 7 days Thailand trip from Bangladesh with budget hotels and sightseeing.')">
-                    Thailand Trip
-                </button>
-
-                <button onclick="setPrompt('Give me all country flight info.')">
-                    Global Flights
-                </button>
-            </div>
-
-        </section>
-
-        <section id="resultSection" class="result-section hidden">
-
-            <div class="result-header">
-                <div>
-                    <h2>Your AI Travel Plan</h2>
-                    <p id="threadInfo">Thread ID: -</p>
+            <!-- Destination Marquee Section -->
+            <section class="marquee-section" id="destinations">
+                <div class="section-header center">
+                    <span class="section-tag">EXPLORE WORLDWIDE</span>
+                    <h2 class="section-title">Where will your next story begin?</h2>
                 </div>
 
-                <div class="result-actions">
-                    <button class="copy-btn" onclick="copyResult()">
-                        Copy
-                    </button>
-
-                    <button class="download-btn" onclick="downloadPDF()">
-                        Download PDF
-                    </button>
+                <div class="marquee-wrapper">
+                    <div class="marquee-content">
+                        <div class="dest-card">
+                            <img src="https://images.unsplash.com/photo-1503899036084-c55cdd92da26?q=80&w=400&auto=format&fit=crop" alt="Tokyo" loading="lazy">
+                            <div class="dest-info"><h3>Tokyo</h3><span>Japan</span></div>
+                        </div>
+                        <div class="dest-card">
+                            <img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=400&auto=format&fit=crop" alt="Dubai" loading="lazy">
+                            <div class="dest-info"><h3>Dubai</h3><span>UAE</span></div>
+                        </div>
+                        <div class="dest-card">
+                            <img src="https://images.unsplash.com/photo-1525625293386-3f8f99389edd?q=80&w=400&auto=format&fit=crop" alt="Singapore" loading="lazy">
+                            <div class="dest-info"><h3>Singapore</h3><span>Asia</span></div>
+                        </div>
+                        <div class="dest-card">
+                            <img src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=400&auto=format&fit=crop" alt="Paris" loading="lazy">
+                            <div class="dest-info"><h3>Paris</h3><span>France</span></div>
+                        </div>
+                        <div class="dest-card">
+                            <img src="https://images.unsplash.com/photo-1533105079780-92b9be482077?q=80&w=400&auto=format&fit=crop" alt="Santorini" loading="lazy">
+                            <div class="dest-info"><h3>Santorini</h3><span>Greece</span></div>
+                        </div>
+                        <div class="dest-card">
+                            <img src="https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?q=80&w=400&auto=format&fit=crop" alt="Sydney" loading="lazy">
+                            <div class="dest-info"><h3>Sydney</h3><span>Australia</span></div>
+                        </div>
+                    </div>
+                    <!-- Duplicate for infinite seamless scroll -->
+                    <div class="marquee-content" aria-hidden="true">
+                        <div class="dest-card">
+                            <img src="https://images.unsplash.com/photo-1503899036084-c55cdd92da26?q=80&w=400&auto=format&fit=crop" alt="Tokyo" loading="lazy">
+                            <div class="dest-info"><h3>Tokyo</h3><span>Japan</span></div>
+                        </div>
+                        <div class="dest-card">
+                            <img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=400&auto=format&fit=crop" alt="Dubai" loading="lazy">
+                            <div class="dest-info"><h3>Dubai</h3><span>UAE</span></div>
+                        </div>
+                        <div class="dest-card">
+                            <img src="https://images.unsplash.com/photo-1525625293386-3f8f99389edd?q=80&w=400&auto=format&fit=crop" alt="Singapore" loading="lazy">
+                            <div class="dest-info"><h3>Singapore</h3><span>Asia</span></div>
+                        </div>
+                        <div class="dest-card">
+                            <img src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=400&auto=format&fit=crop" alt="Paris" loading="lazy">
+                            <div class="dest-info"><h3>Paris</h3><span>France</span></div>
+                        </div>
+                        <div class="dest-card">
+                            <img src="https://images.unsplash.com/photo-1533105079780-92b9be482077?q=80&w=400&auto=format&fit=crop" alt="Santorini" loading="lazy">
+                            <div class="dest-info"><h3>Santorini</h3><span>Greece</span></div>
+                        </div>
+                        <div class="dest-card">
+                            <img src="https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?q=80&w=400&auto=format&fit=crop" alt="Sydney" loading="lazy">
+                            <div class="dest-info"><h3>Sydney</h3><span>Australia</span></div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </section>
 
-            <div id="pdfContent" class="pdf-content">
-                <h1 class="pdf-title">AI Travel Plan</h1>
-                <div id="resultBox" class="result-box"></div>
-            </div>
+            <!-- Features Section (How It Thinks) -->
+            <section class="features-section" id="how-it-thinks">
+                <div class="section-header">
+                    <span class="section-tag">MULTI-AGENT ARCHITECTURE</span>
+                    <h2 class="section-title">Built for Complex Travel.<br>Powered by Specialized Reasoning.</h2>
+                </div>
 
-        </section>
+                <div class="features-grid">
+                    <!-- Feature 01 -->
+                    <div class="feature-card">
+                        <div class="feature-num">01</div>
+                        <div class="feature-icon">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                        </div>
+                        <h3>Understands Your Real Intent</h3>
+                        <p>No rigid form dropdowns or 50 filters. Tell Tripmate your budget, style, dietary preferences, or flight constraints naturally in plain English.</p>
+                        <ul class="feature-list">
+                            <li><span>✓</span> Natural language intent parser</li>
+                            <li><span>✓</span> Budget & duration constraint solver</li>
+                            <li><span>✓</span> Custom origin/destination support</li>
+                        </ul>
+                    </div>
 
-        <section id="errorBox" class="error-box hidden"></section>
+                    <!-- Feature 02 -->
+                    <div class="feature-card">
+                        <div class="feature-num">02</div>
+                        <div class="feature-icon">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            </svg>
+                        </div>
+                        <h3>Fetches Live Flights & Hotels</h3>
+                        <p>Sub-agents execute live API lookups to check AviationStack flight status and Tavily search engines to surface real hotel prices and verified reviews.</p>
+                        <ul class="feature-list">
+                            <li><span>✓</span> Real-time flight schedule verification</li>
+                            <li><span>✓</span> Curated hotel recommendations</li>
+                            <li><span>✓</span> Estimated total budget breakdowns</li>
+                        </ul>
+                    </div>
+
+                    <!-- Feature 03 -->
+                    <div class="feature-card">
+                        <div class="feature-num">03</div>
+                        <div class="feature-icon">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                            </svg>
+                        </div>
+                        <h3>Remembers & Remaps Continuously</h3>
+                        <p>Backed by PostgreSQL state checkpointers. Return to your thread ID anytime to request adjustments like "Make day 3 more relaxed" or "Swap out hotel for budget option".</p>
+                        <ul class="feature-list">
+                            <li><span>✓</span> PostgreSQL thread state persistence</li>
+                            <li><span>✓</span> Multi-turn memory retention</li>
+                            <li><span>✓</span> PDF export & Markdown copying</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- How It Works Section removed -->
+
+
+        </div>
+        <!-- ================= END PUBLIC LANDING PAGE VIEW ================= -->
+
+
+        <!-- ================= LOGGED-IN PLANNER APP VIEW ================= -->
+        <div id="appPlannerView" class="hidden">
+
+            <section class="planner-section" id="planner">
+                <div class="planner-welcome-bar">
+                    <div>
+                        <span class="section-tag">AUTHENTICATED WORKSPACE</span>
+                        <h2 class="section-title">Hello <span id="userWelcomeName">Explorer</span>, welcome to Tripmate!</h2>
+                        <p class="section-desc">Plan your next tour using autonomous multi-agent intelligence below.</p>
+                    </div>
+                </div>
+
+                <div class="planner-card">
+                    <div class="card-header">
+                        <div>
+                            <h2>Where do you want to go?</h2>
+                            <p>Type your travel request or select a quick starter prompt below.</p>
+                        </div>
+                        <div class="status-pill">
+                            <span class="status-dot"></span>
+                            LangGraph Active
+                        </div>
+                    </div>
+
+                    <div class="input-area">
+                        <textarea id="userInput" placeholder="Plan a complete 7 days Japan trip including flights, hotels and sightseeing under 2 lakhs..."></textarea>
+                        <button id="sendBtn" onclick="sendMessage()">
+                            <span id="btnText">Generate Plan</span>
+                            <span id="btnLoader" class="loader hidden"></span>
+                        </button>
+                    </div>
+
+                    <div class="quick-prompts">
+                        <button onclick="setPrompt('Plan a complete 7 days Japan trip from Bangladesh including flights, hotels and sightseeing under 2 lakhs.')">🌸 Japan Trip</button>
+                        <button onclick="setPrompt('Plan a 5 days Dubai trip from Dhaka with flights, hotels and sightseeing.')">🏜️ Dubai Trip</button>
+                        <button onclick="setPrompt('Plan a 7 days Thailand trip from Bangladesh with budget hotels and sightseeing.')">🏖️ Thailand Trip</button>
+                        <button onclick="setPrompt('Give me all country flight info and popular flight routes.')">✈️ Global Flights</button>
+                    </div>
+                </div>
+
+                <div id="resultSection" class="result-section hidden">
+                    <div class="result-header">
+                        <div>
+                            <h2>Your Tailored AI Travel Plan</h2>
+                            <p id="threadInfo">Thread ID: -</p>
+                        </div>
+                        <div class="result-actions">
+                            <button class="btn btn-sm btn-outline copy-btn" onclick="copyResult()">
+                                📋 Copy Markdown
+                            </button>
+                            <button class="btn btn-sm btn-primary download-btn" onclick="downloadPDF()">
+                                📄 Download PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="pdfContent" class="pdf-content">
+                        <h1 class="pdf-title">Tripmate AI Travel Plan</h1>
+                        <div id="resultBox" class="result-box"></div>
+                    </div>
+                </div>
+
+                <div id="errorBox" class="error-box hidden"></div>
+            </section>
+
+        </div>
+        <!-- ================= END LOGGED-IN PLANNER APP VIEW ================= -->
 
     </main>
 
-    <footer>
-        Built with FastAPI, LangGraph, Groq, PostgreSQL, Tavily and AviationStack
+    <!-- Authentication Modal (Frontend-Only UX) -->
+    <div class="modal-overlay hidden" id="authModal" onclick="handleModalBackdropClick(event)">
+        <div class="modal-card">
+            <button class="modal-close" onclick="closeAuthModal()" aria-label="Close modal">&times;</button>
+            <div class="modal-tabs">
+                <button class="tab-btn active" id="tabLogin" onclick="switchAuthTab('login')">Log In</button>
+                <button class="tab-btn" id="tabSignup" onclick="switchAuthTab('signup')">Sign Up</button>
+            </div>
+
+            <div class="modal-body">
+                <h3 id="modalTitle">Welcome Back to Tripmate</h3>
+                <p id="modalSubtitle" class="modal-sub">Log in to access saved travel threads and preferences.</p>
+
+                <form id="authForm" onsubmit="handleAuthSubmit(event)">
+                    <div class="form-group hidden" id="nameGroup">
+                        <label for="authName">Full Name</label>
+                        <input type="text" id="authName" placeholder="Alex Morgan">
+                    </div>
+                    <div class="form-group">
+                        <label for="authEmail">Email Address</label>
+                        <input type="email" id="authEmail" required placeholder="alex@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="authPassword">Password</label>
+                        <input type="password" id="authPassword" required placeholder="••••••••">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full" id="authSubmitBtn">
+                        Continue to Tripmate
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Single-Line Footer -->
+    <footer class="site-footer">
+        <div class="footer-single-line">
+            <span class="footer-brand-name">Tripmate<span class="logo-dot">.ai</span></span>
+            <span class="footer-sep">•</span>
+            <span>© 2026 Tripmate AI. All rights reserved.</span>
+        </div>
     </footer>
 
-    <!-- Markdown Renderer -->
+    <!-- Markdown & PDF Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
-    <!-- PDF Download Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-    <!-- Your Custom JS -->
+    <!-- Main JavaScript -->
     <script src="/static/script.js"></script>
-
 </body>
 </html>
