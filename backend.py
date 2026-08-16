@@ -208,18 +208,26 @@ graph.add_edge("final_agent", END)
 # PostgreSQL Checkpointer
 # =========================
 DATABASE_URL = get_database_url()
+_conn = None
 
-_conn = psycopg.connect(
-    DATABASE_URL,
-    autocommit=True,
-    row_factory=dict_row
-)
+def get_db_connection():
+    global _conn
+    if _conn is None or getattr(_conn, "closed", True):
+        _conn = psycopg.connect(
+            DATABASE_URL,
+            autocommit=True,
+            row_factory=dict_row
+        )
+    return _conn
 
-checkpointer = PostgresSaver(_conn)
-checkpointer.setup()
-
-travel_graph = graph.compile(checkpointer=checkpointer)
-
+def get_compiled_graph():
+    conn = get_db_connection()
+    checkpointer = PostgresSaver(conn)
+    try:
+        checkpointer.setup()
+    except Exception:
+        pass
+    return graph.compile(checkpointer=checkpointer)
 
 
 # =========================
@@ -236,19 +244,32 @@ def run_travel_agent(user_input: str, thread_id: str | None = None):
         }
     }
 
-    result = travel_graph.invoke(
-        {
-            "messages": [
-                HumanMessage(content=user_input)
-            ],
-            "user_query": user_input,
-            "flight_results": "",
-            "hotel_results": "",
-            "itinerary": "",
-            "llm_calls": 0
-        },
-        config=config
-    )
+    global _conn
+    result = None
+
+    for attempt in range(2):
+        try:
+            travel_graph = get_compiled_graph()
+            result = travel_graph.invoke(
+                {
+                    "messages": [
+                        HumanMessage(content=user_input)
+                    ],
+                    "user_query": user_input,
+                    "flight_results": "",
+                    "hotel_results": "",
+                    "itinerary": "",
+                    "llm_calls": 0
+                },
+                config=config
+            )
+            break
+        except Exception as err:
+            err_msg = str(err).lower()
+            if ("closed" in err_msg or "connection" in err_msg or "operationalerror" in err_msg) and attempt == 0:
+                _conn = None
+                continue
+            raise err
 
     final_answer = result["messages"][-1].content
 

@@ -197,6 +197,41 @@ To enable **Sign in with Google** on local development:
 
 ---
 
+## 🚀 Deployment Guide (Render - Recommended)
+
+### 1. Create Web Service on Render
+1. Go to **[Render.com](https://render.com/)** and sign in with GitHub.
+2. Click **New +** > **Web Service**.
+3. Connect your repository: `trivedi2006/TripMate-Multi-Agent-Travel-Planner`.
+
+### 2. Configure Service Settings
+- **Name**: `tripmate-ai`
+- **Environment**: `Python 3`
+- **Region**: Choose closest region
+- **Branch**: `main`
+- **Build Command**: `pip install -r requirements.txt`
+- **Start Command**: `uvicorn app:app --host 0.0.0.0 --port $PORT`
+
+### 3. Add Environment Variables
+In Render's **Environment** tab, add your keys:
+- `GROQ_API_KEY`
+- `AVIATIONSTACK_API_KEY`
+- `TAVILY_API_KEY`
+- `DEFAULT_ORIGIN_IATA` = `DAC`
+- `DATABASE_URL`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+
+### 4. Authorize Production URL in Google OAuth
+Once Render builds your app (e.g. `https://tripmate-ai.onrender.com`):
+1. Return to **Google Cloud Console > Credentials**.
+2. Click your **OAuth 2.0 Client ID**.
+3. Under **Authorized JavaScript origins**, add your Render live domain:
+   `https://tripmate-ai.onrender.com`
+4. Click **Save**.
+
+---
+
 ## 📡 API Endpoint Reference
 
 ### `POST /api/travel`

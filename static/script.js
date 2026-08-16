@@ -289,50 +289,226 @@ function copyResult() {
         });
 }
 
-function downloadPDF() {
-    const pdfContent = document.getElementById("pdfContent");
+function extractDestinationFromPlan(markdownText) {
+    if (!markdownText) return "Travel_Plan";
+    const destinations = [
+        "Japan", "Tokyo", "Kyoto", "Osaka", "Beijing", "China", "Paris", "France",
+        "Dubai", "Thailand", "Bangkok", "Phuket", "London", "Rome", "Italy", "Spain",
+        "Barcelona", "New York", "Bali", "Singapore", "Dhaka", "Switzerland"
+    ];
+    for (const dest of destinations) {
+        const regex = new RegExp(`\\b${dest}\\b`, "i");
+        if (regex.test(markdownText)) {
+            return dest;
+        }
+    }
+    return "Travel_Plan";
+}
 
-    if (!latestAnswerMarkdown || !pdfContent) {
-        showError("No travel plan available to download.");
+function downloadPDF() {
+    const resultBox = document.getElementById("resultBox");
+
+    if (!latestAnswerMarkdown || !resultBox || !resultBox.innerHTML.trim()) {
+        showError("No travel plan available to download. Please generate a travel plan first.");
         return;
     }
 
     const downloadBtn = document.querySelector(".download-btn");
-    const oldText = downloadBtn ? downloadBtn.innerHTML : "";
+    const oldText = downloadBtn ? downloadBtn.innerHTML : "📄 Download PDF";
 
     if (downloadBtn) {
-        downloadBtn.innerHTML = "⌛ Preparing PDF...";
+        downloadBtn.innerHTML = "⌛ Generating PDF...";
         downloadBtn.disabled = true;
     }
 
-    const options = {
-        margin: 0.5,
-        filename: `tripmate-itinerary-${Date.now()}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-        jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] }
-    };
+    // Determine clean destination filename (e.g. Tripmate_Japan_Travel_Plan.pdf)
+    const destName = extractDestinationFromPlan(latestAnswerMarkdown);
+    const sanitizedDest = destName.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const docTitle = `Tripmate_${sanitizedDest}_Travel_Plan`;
 
-    if (typeof html2pdf !== "undefined") {
-        html2pdf()
-            .set(options)
-            .from(pdfContent)
-            .save()
-            .then(() => {
-                if (downloadBtn) {
-                    downloadBtn.innerHTML = oldText;
-                    downloadBtn.disabled = false;
+    const loggedUser = getLoggedInUser();
+    const userName = loggedUser ? loggedUser.name : "Valued Traveler";
+
+    // Remove any previous temporary print iframe
+    const oldFrame = document.getElementById("pdfTempPrintFrame");
+    if (oldFrame) oldFrame.remove();
+
+    // Create a hidden print iframe to render crisp, vector-sharp document PDF without blank pages
+    const printFrame = document.createElement("iframe");
+    printFrame.id = "pdfTempPrintFrame";
+    printFrame.style.position = "fixed";
+    printFrame.style.right = "0";
+    printFrame.style.bottom = "0";
+    printFrame.style.width = "0";
+    printFrame.style.height = "0";
+    printFrame.style.border = "0";
+    document.body.appendChild(printFrame);
+
+    const frameDoc = printFrame.contentWindow.document;
+    frameDoc.open();
+    frameDoc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>${docTitle}</title>
+            <style>
+                @page {
+                    size: A4;
+                    margin: 15mm 15mm 15mm 15mm;
                 }
-            })
-            .catch(() => {
-                if (downloadBtn) {
-                    downloadBtn.innerHTML = oldText;
-                    downloadBtn.disabled = false;
+                body {
+                    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                    color: #0f172a;
+                    background: #ffffff;
+                    margin: 0;
+                    padding: 0;
+                    font-size: 13px;
+                    line-height: 1.65;
                 }
-                showError("Could not download PDF.");
-            });
-    }
+                .pdf-header {
+                    border-bottom: 3px solid #ea580c;
+                    padding-bottom: 12px;
+                    margin-bottom: 22px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-end;
+                }
+                .pdf-header h1 {
+                    margin: 0;
+                    color: #0f172a;
+                    font-size: 24px;
+                    font-weight: 800;
+                    letter-spacing: -0.02em;
+                }
+                .pdf-header p {
+                    margin: 4px 0 0 0;
+                    color: #ea580c;
+                    font-size: 13px;
+                    font-weight: 600;
+                }
+                .pdf-meta {
+                    text-align: right;
+                    font-size: 11px;
+                    color: #64748b;
+                }
+                .pdf-body h1, .pdf-body h2, .pdf-body h3, .pdf-body h4 {
+                    color: #0f172a;
+                    margin-top: 22px;
+                    margin-bottom: 10px;
+                    page-break-after: avoid;
+                    break-after: avoid;
+                }
+                .pdf-body h2 {
+                    border-bottom: 1.5px solid #cbd5e1;
+                    padding-bottom: 5px;
+                    font-size: 17px;
+                    color: #ea580c;
+                    font-weight: 700;
+                }
+                .pdf-body h3 {
+                    font-size: 14px;
+                    color: #0284c7;
+                    font-weight: 600;
+                }
+                .pdf-body p, .pdf-body li {
+                    color: #334155;
+                    margin-bottom: 8px;
+                    font-size: 12px;
+                    line-height: 1.65;
+                }
+                .pdf-body ul, .pdf-body ol {
+                    padding-left: 20px;
+                    margin-top: 6px;
+                    margin-bottom: 14px;
+                }
+                .pdf-body li {
+                    margin-bottom: 6px;
+                    page-break-inside: avoid;
+                }
+                .pdf-body blockquote {
+                    border-left: 4px solid #ea580c;
+                    background: #fff7ed;
+                    padding: 10px 16px;
+                    margin: 14px 0;
+                    color: #9a3412;
+                    border-radius: 4px;
+                    page-break-inside: avoid;
+                }
+                .pdf-body table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 16px 0;
+                    page-break-inside: avoid;
+                }
+                .pdf-body th, .pdf-body td {
+                    border: 1px solid #cbd5e1;
+                    padding: 8px 12px;
+                    font-size: 11.5px;
+                    color: #334155;
+                }
+                .pdf-body th {
+                    background: #f1f5f9;
+                    color: #0f172a;
+                    font-weight: 700;
+                }
+                .pdf-footer {
+                    border-top: 1px solid #cbd5e1;
+                    margin-top: 35px;
+                    padding-top: 12px;
+                    font-size: 10px;
+                    color: #94a3b8;
+                    display: flex;
+                    justify-content: space-between;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="pdf-header">
+                <div>
+                    <h1>✈️ Tripmate AI — Travel Itinerary</h1>
+                    <p>Autonomous Multi-Agent Travel Plan</p>
+                </div>
+                <div class="pdf-meta">
+                    <p style="margin:0; font-weight:600; color:#1e293b;">Prepared for: ${userName}</p>
+                    <p style="margin:2px 0 0 0;">Date: ${new Date().toLocaleDateString()}</p>
+                </div>
+            </div>
+
+            <div class="pdf-body">
+                ${resultBox.innerHTML}
+            </div>
+
+            <div class="pdf-footer">
+                <span>Tripmate AI • Autonomous Travel Agent</span>
+                <span>© ${new Date().getFullYear()} Tripmate AI. All rights reserved.</span>
+            </div>
+        </body>
+        </html>
+    `);
+    frameDoc.close();
+
+    setTimeout(() => {
+        try {
+            printFrame.contentWindow.focus();
+            printFrame.contentWindow.print();
+        } catch (e) {
+            console.error("Print error:", e);
+        }
+
+        if (downloadBtn) {
+            downloadBtn.innerHTML = "✅ PDF Ready";
+            setTimeout(() => {
+                downloadBtn.innerHTML = oldText;
+                downloadBtn.disabled = false;
+            }, 2000);
+        }
+
+        setTimeout(() => {
+            if (document.body.contains(printFrame)) {
+                document.body.removeChild(printFrame);
+            }
+        }, 1500);
+    }, 400);
 }
 
 /* --------------------------------------------------------------------------
