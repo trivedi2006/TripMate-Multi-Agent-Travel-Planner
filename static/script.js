@@ -77,6 +77,12 @@ function getLoggedInUser() {
 
 function logoutUser() {
     localStorage.removeItem("tripmate_user");
+    closeProfileDropdown();
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+        try {
+            window.google.accounts.id.disableAutoSelect();
+        } catch (e) {}
+    }
     switchView("landing");
 }
 
@@ -358,8 +364,106 @@ function handleModalBackdropClick(event) {
     }
 }
 
+/* --------------------------------------------------------------------------
+   5. USER DATABASE & AUTHENTICATION CONTROLLER
+   -------------------------------------------------------------------------- */
+const DB_USERS_KEY = "tripmate_users_db";
+
+function getUsersDatabase() {
+    try {
+        const data = localStorage.getItem(DB_USERS_KEY);
+        if (data) {
+            return JSON.parse(data);
+        }
+    } catch (e) {
+        console.error("Failed to read user database:", e);
+    }
+    // Initialize default seed user database
+    const seedUsers = [
+        {
+            id: "usr_demo",
+            name: "Alex Morgan",
+            email: "alex@example.com",
+            password: "password123",
+            createdAt: new Date().toISOString()
+        }
+    ];
+    localStorage.setItem(DB_USERS_KEY, JSON.stringify(seedUsers));
+    return seedUsers;
+}
+
+function saveUserToDatabase(userObj) {
+    const users = getUsersDatabase();
+    users.push(userObj);
+    localStorage.setItem(DB_USERS_KEY, JSON.stringify(users));
+}
+
+function findUserInDatabase(email) {
+    const users = getUsersDatabase();
+    const cleanEmail = (email || "").trim().toLowerCase();
+    return users.find(u => u.email.toLowerCase() === cleanEmail);
+}
+
+function findUserByGoogleSub(googleSub) {
+    if (!googleSub) return null;
+    const users = getUsersDatabase();
+    return users.find(u => u.googleSub === googleSub);
+}
+
+function updateUserInDatabase(userObj) {
+    const users = getUsersDatabase();
+    const index = users.findIndex(u => (userObj.googleSub && u.googleSub === userObj.googleSub) || u.email.toLowerCase() === userObj.email.toLowerCase());
+    if (index !== -1) {
+        users[index] = { ...users[index], ...userObj };
+        localStorage.setItem(DB_USERS_KEY, JSON.stringify(users));
+    }
+}
+
+function resetAuthModalAlerts() {
+    const authErrorMsg = document.getElementById("authErrorMsg");
+    const authSuccessMsg = document.getElementById("authSuccessMsg");
+    if (authErrorMsg) {
+        authErrorMsg.textContent = "";
+        authErrorMsg.classList.add("hidden");
+    }
+    if (authSuccessMsg) {
+        authSuccessMsg.textContent = "";
+        authSuccessMsg.classList.add("hidden");
+    }
+}
+
+function openAuthModal(mode = "login") {
+    const modal = document.getElementById("authModal");
+    if (!modal) return;
+
+    resetAuthModalAlerts();
+    activeAuthMode = mode;
+    switchAuthTab(mode);
+    modal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+
+    // Render Google Sign-In Button on modal open
+    setTimeout(renderGoogleSignInButton, 50);
+}
+
+function closeAuthModal() {
+    const modal = document.getElementById("authModal");
+    if (!modal) return;
+
+    resetAuthModalAlerts();
+    modal.classList.add("hidden");
+    document.body.style.overflow = "";
+}
+
+function handleModalBackdropClick(event) {
+    if (event.target.id === "authModal") {
+        closeAuthModal();
+    }
+}
+
 function switchAuthTab(mode) {
     activeAuthMode = mode;
+    resetAuthModalAlerts();
 
     const tabLogin = document.getElementById("tabLogin");
     const tabSignup = document.getElementById("tabSignup");
@@ -372,9 +476,9 @@ function switchAuthTab(mode) {
         if (tabSignup) tabSignup.classList.add("active");
         if (tabLogin) tabLogin.classList.remove("active");
         if (nameGroup) nameGroup.classList.remove("hidden");
-        if (modalTitle) modalTitle.textContent = "Create Your Free Account";
-        if (modalSubtitle) modalSubtitle.textContent = "Save your AI itineraries, preferences, and custom trip threads.";
-        if (submitBtn) submitBtn.textContent = "Create Account & Open Studio";
+        if (modalTitle) modalTitle.textContent = "Create Your Account";
+        if (modalSubtitle) modalSubtitle.textContent = "Sign up to save your custom trip plans and AI agent threads.";
+        if (submitBtn) submitBtn.textContent = "Create Account & Open Planner";
     } else {
         if (tabLogin) tabLogin.classList.add("active");
         if (tabSignup) tabSignup.classList.remove("active");
@@ -385,22 +489,218 @@ function switchAuthTab(mode) {
     }
 }
 
+function showAuthError(msg) {
+    const authErrorMsg = document.getElementById("authErrorMsg");
+    if (authErrorMsg) {
+        authErrorMsg.textContent = msg;
+        authErrorMsg.classList.remove("hidden");
+    }
+}
+
+function showAuthSuccess(msg) {
+    const authSuccessMsg = document.getElementById("authSuccessMsg");
+    if (authSuccessMsg) {
+        authSuccessMsg.textContent = msg;
+        authSuccessMsg.classList.remove("hidden");
+    }
+}
+
 function handleAuthSubmit(event) {
     event.preventDefault();
-    const email = document.getElementById("authEmail").value;
-    const nameInput = document.getElementById("authName").value;
-    const name = nameInput || email.split("@")[0];
+    resetAuthModalAlerts();
 
-    const userSession = {
-        name: name,
-        email: email,
-        isLoggedIn: true,
-        loginTime: new Date().toISOString()
-    };
-    localStorage.setItem("tripmate_user", JSON.stringify(userSession));
+    const emailInput = document.getElementById("authEmail").value.trim().toLowerCase();
+    const passwordInput = document.getElementById("authPassword").value.trim();
+    const nameInput = document.getElementById("authName").value.trim();
 
-    closeAuthModal();
-    switchView("planner");
+    if (!emailInput || !passwordInput) {
+        showAuthError("Please fill in both email and password.");
+        return;
+    }
+
+    if (activeAuthMode === "signup") {
+        // Check if user already exists in database
+        const existingUser = findUserInDatabase(emailInput);
+        if (existingUser) {
+            showAuthError(`⚠️ An account with "${emailInput}" already exists! Please click "Log In" above.`);
+            return;
+        }
+
+        // Create & Save User Record in Database
+        const newUser = {
+            id: "usr_" + Date.now(),
+            name: nameInput || emailInput.split("@")[0],
+            email: emailInput,
+            password: passwordInput,
+            createdAt: new Date().toISOString()
+        };
+
+        saveUserToDatabase(newUser);
+
+        // Session reset & login
+        localStorage.removeItem("tripmate_user");
+        const userSession = {
+            id: newUser.id,
+            name: newUser.name,
+            email: newUser.email,
+            isLoggedIn: true,
+            loginTime: new Date().toISOString()
+        };
+        localStorage.setItem("tripmate_user", JSON.stringify(userSession));
+
+        showAuthSuccess(`🎉 Account created successfully! Welcome to Tripmate, ${newUser.name}.`);
+
+        setTimeout(() => {
+            closeAuthModal();
+            switchView("planner");
+        }, 900);
+
+    } else {
+        // Login mode: Look up user in Database
+        const userInDb = findUserInDatabase(emailInput);
+
+        if (!userInDb) {
+            showAuthError(`❌ No account found with email "${emailInput}". Please click "Sign Up" above to register.`);
+            return;
+        }
+
+        if (userInDb.password !== passwordInput) {
+            showAuthError(`❌ Incorrect password for "${emailInput}". Please try again.`);
+            return;
+        }
+
+        // Session reset & Login success
+        localStorage.removeItem("tripmate_user");
+        const userSession = {
+            id: userInDb.id,
+            name: userInDb.name,
+            email: userInDb.email,
+            isLoggedIn: true,
+            loginTime: new Date().toISOString()
+        };
+        localStorage.setItem("tripmate_user", JSON.stringify(userSession));
+
+        showAuthSuccess(`✨ Welcome back, ${userInDb.name}! Opening your planner workspace...`);
+
+        setTimeout(() => {
+            closeAuthModal();
+            switchView("planner");
+        }, 900);
+    }
+}
+
+/* --------------------------------------------------------------------------
+   GOOGLE IDENTITY SERVICES OAUTH CONTROLLER
+   -------------------------------------------------------------------------- */
+const GOOGLE_CLIENT_ID = "443771133772-c6sa8ulrqoiac18lpflnvo3ntckfabuq.apps.googleusercontent.com";
+let isGoogleSdkInitialized = false;
+
+function initGoogleAuthSDK() {
+    if (isGoogleSdkInitialized) return;
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+        window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleCredentialResponse,
+            auto_select: false
+        });
+        isGoogleSdkInitialized = true;
+    }
+}
+
+function renderGoogleSignInButton() {
+    initGoogleAuthSDK();
+    const container = document.getElementById("googleBtnContainer");
+    if (container && window.google && window.google.accounts && window.google.accounts.id) {
+        container.innerHTML = "";
+        window.google.accounts.id.renderButton(container, {
+            type: "standard",
+            theme: "filled_blue",
+            size: "large",
+            text: "continue_with",
+            shape: "pill",
+            width: 320
+        });
+    }
+}
+
+function handleGoogleCredentialResponse(response) {
+    try {
+        if (!response || !response.credential) {
+            showAuthError("No Google credential received. Please try again.");
+            return;
+        }
+
+        // 1. DECODE GOOGLE ID TOKEN (JWT Payload)
+        const base64Url = response.credential.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        const payload = JSON.parse(jsonPayload);
+
+        // 2. EXTRACT AUTHENTICATED IDENTITY DIRECTLY FROM ID TOKEN
+        const googleSub = payload.sub; // Stable Google Subject ID
+        const googleEmail = (payload.email || "").trim().toLowerCase();
+        const googleName = (payload.name || payload.given_name || googleEmail.split('@')[0]).trim();
+        const googlePicture = payload.picture || "";
+
+        if (!googleEmail || !googleSub) {
+            showAuthError("Invalid Google token payload. Missing email or user ID.");
+            return;
+        }
+
+        // 3. LOOK UP OR CREATE USER IN DATABASE USING STABLE SUB / EMAIL
+        let userInDb = findUserByGoogleSub(googleSub) || findUserInDatabase(googleEmail);
+
+        if (!userInDb) {
+            // Create new Google user account
+            userInDb = {
+                id: "usr_g_" + googleSub,
+                googleSub: googleSub,
+                name: googleName,
+                email: googleEmail,
+                picture: googlePicture,
+                password: "google_oauth_provider",
+                createdAt: new Date().toISOString()
+            };
+            saveUserToDatabase(userInDb);
+        } else {
+            // Update existing user record with verified Google identity details
+            userInDb.googleSub = googleSub;
+            userInDb.name = googleName;
+            userInDb.email = googleEmail;
+            if (googlePicture) userInDb.picture = googlePicture;
+            updateUserInDatabase(userInDb);
+        }
+
+        // 4. SESSION RESET - PURGE STALE STATE & STORE EXACT ONE USER
+        localStorage.removeItem("tripmate_user");
+
+        const newSession = {
+            id: userInDb.id,
+            googleSub: userInDb.googleSub,
+            name: userInDb.name,
+            email: userInDb.email,
+            picture: userInDb.picture,
+            isLoggedIn: true,
+            loginTime: new Date().toISOString()
+        };
+
+        localStorage.setItem("tripmate_user", JSON.stringify(newSession));
+
+        // 5. UPDATE UI WITH VERIFIED USER NAME & EMAIL
+        showAuthSuccess(`✨ Welcome to Tripmate, ${userInDb.name}!`);
+
+        setTimeout(() => {
+            closeAuthModal();
+            switchView("planner");
+        }, 800);
+
+    } catch (err) {
+        console.error("Google Auth credential handler error:", err);
+        showAuthError("Google Sign-In failed. Please try again.");
+    }
 }
 
 function toggleProfileDropdown(event) {

@@ -69,10 +69,6 @@
                             <span id="dropdownUserEmail">alex@example.com</span>
                         </div>
                         <div class="dropdown-divider"></div>
-                        <a href="#" class="dropdown-item" onclick="switchView('planner'); closeProfileDropdown(); return false;">
-                            🚀 Planner
-                        </a>
-                        <div class="dropdown-divider"></div>
                         <button class="dropdown-item logout-item" onclick="logoutUser(); closeProfileDropdown();">
                             🚪 Log Out
                         </button>
@@ -378,10 +374,6 @@
                             <h2>Where do you want to go?</h2>
                             <p>Type your travel request or select a quick starter prompt below.</p>
                         </div>
-                        <div class="status-pill">
-                            <span class="status-dot"></span>
-                            LangGraph Active
-                        </div>
                     </div>
 
                     <div class="input-area">
@@ -443,6 +435,9 @@
                 <h3 id="modalTitle">Welcome Back to Tripmate</h3>
                 <p id="modalSubtitle" class="modal-sub">Log in to access saved travel threads and preferences.</p>
 
+                <div id="authErrorMsg" class="auth-error-box hidden"></div>
+                <div id="authSuccessMsg" class="auth-success-box hidden"></div>
+
                 <form id="authForm" onsubmit="handleAuthSubmit(event)">
                     <div class="form-group hidden" id="nameGroup">
                         <label for="authName">Full Name</label>
@@ -461,6 +456,12 @@
                         Continue to Tripmate
                     </button>
                 </form>
+
+                <div class="auth-divider">
+                    <span>OR CONTINUE WITH</span>
+                </div>
+
+                <div id="googleBtnContainer" class="google-btn-wrapper"></div>
             </div>
         </div>
     </div>
@@ -477,6 +478,9 @@
     <!-- Markdown & PDF Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- Google Identity Services SDK -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <!-- Main JavaScript -->
     <script src="/static/script.js"></script>
