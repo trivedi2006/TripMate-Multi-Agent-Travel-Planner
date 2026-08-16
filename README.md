@@ -270,5 +270,5 @@ Returns system status.
 
 
 <p center="text">
-  Made with ❤️ by <strong>Daksh Trivedi</strong> • Powered by <strong>LangGraph & Groq</strong>
+  Made with ❤️ by <strong>Daksh Trivedi</strong> 
 </p>
